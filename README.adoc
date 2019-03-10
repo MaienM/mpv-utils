@@ -1,0 +1,6 @@
+= MPV Utils
+
+Some utilities for MPV that connect through the IPC interface, rather than running in MPV directly.
+
+This is mostly useful for things that generate a lot of output.
+
