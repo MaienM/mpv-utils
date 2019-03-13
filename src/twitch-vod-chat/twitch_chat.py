@@ -116,7 +116,7 @@ class TwitchChat(threading.Thread):
 
 		with self.lock:
 			slice = self.time_slices.get(timestamp, (0, 0))
-			return [TwitchMessage(m) for m in self.messages[slice[0]:slice[1]]]
+			return self.messages[slice[0]:slice[1]]
 
 	def _get_next_timestamp_index(self, time):
 		"""
@@ -139,7 +139,7 @@ class TwitchChat(threading.Thread):
 			start_index = -1
 			current_timestamp = -1
 			for i, message in enumerate(self.messages):
-				timestamp = int(message['content_offset_seconds'])
+				timestamp = int(message.timestamp)
 				if timestamp != current_timestamp:
 					self.time_slices[current_timestamp] = (start_index, i - 1)
 					start_index = i
@@ -175,11 +175,12 @@ class TwitchChat(threading.Thread):
 
 	def _process_messages(self, messages):
 		dprint(f'[process] Processing {len(messages)} messages')
+		messages = [TwitchMessage(message) for message in messages]
 		with self.lock:
 			# The API appears to return some more messages than needed, at least on the first request. Drop all messages
 			# that we already have.
-			if self.messages and messages[0]['content_offset_seconds'] < self.messages[-1]['content_offset_seconds']:
-				while messages and messages.pop(0)['_id'] != self.messages[-1]['_id']:
+			if self.messages and messages[0].timestamp < self.messages[-1].timestamp:
+				while messages and messages.pop(0) != self.messages[-1]:
 					pass
 				dprint(f'[process] After dropping messages we already have, {len(messages)} remain')
 
