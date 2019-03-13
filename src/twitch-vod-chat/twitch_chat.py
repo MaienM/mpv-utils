@@ -88,15 +88,15 @@ class TwitchChat(threading.Thread):
 
 	def run(self):
 		while not self.stop_requested.is_set():
+			# Check whether we need to load more messages
+			if self.last_requested_position + TwitchChat.LOAD_MORE_TRESHOLD >= self.loaded_range[1]:
+				self._load_more()
+
 			# Wait until a sufficient amount of time has passed, but allow earlier triggering by use of a condition.
 			dprint('[loop] Waiting for timer/interrupt')
 			with self.needs_loading:
 				self.needs_loading.wait(30)
 			dprint('[loop] Checking whether we need to load more')
-
-			# Check whether we need to load more messages
-			if self.last_requested_position + TwitchChat.LOAD_MORE_TRESHOLD >= self.loaded_range[1]:
-				self._load_more()
 
 	def __getitem__(self, timestamp):
 		# Load more if the timestamp is outside of what is currently loaded.
