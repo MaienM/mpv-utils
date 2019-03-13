@@ -170,11 +170,6 @@ class TwitchChat(threading.Thread):
 			dprint(f'[load] Clearing {cutoff_index} old messages')
 			del self.messages[:cutoff_index]
 
-			# Remove the message for the last known timestamp. We will be loading these again, as there is no guarantee
-			# we have all messages for that timestamp.
-			first_index_of_last_timestamp = self.time_slices.get(self.loaded_range[1] + 1, (10 ** 10,))[0]
-			del self.messages[first_index_of_last_timestamp:]
-
 			# Update the indexes.
 			self._update_indexes()
 
