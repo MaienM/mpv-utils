@@ -8,10 +8,6 @@ import _logging as logging
 from symbols import BADGES
 
 
-class TwitchLoadError(Exception):
-	pass
-
-
 class TwitchCommenter(object):
 	""" A class representing a Twitch chat member. """
 
@@ -158,10 +154,14 @@ class TwitchChat(threading.Thread):
 				max(self.time_slices.keys()) - 1,
 			)
 <<<<<<< HEAD
+<<<<<<< HEAD
 			self.log.info(f'Range: {self.loaded_range}')
 =======
 			self.log.info(f'Range: {format_timestamp(self.loaded_range[0])} - {format_timestamp(self.loaded_range[1])}')
 >>>>>>> 2540933... fixup! Improved logging
+=======
+			self.log.info(f'Available range: {self.loaded_range}')
+>>>>>>> 295f47c... Added some more details to the log
 
 	def _clean_stored_messages(self):
 		""" Trim the message list to the messages that are still relevant given the current position and settings. """
@@ -237,7 +237,7 @@ class TwitchChat(threading.Thread):
 			with self.lock:
 				self.loaded_range = (self.loaded_range[0], float('inf'))
 		if self.loaded_range[1] - self.last_requested_position < TwitchChat.LOAD_MORE_TRESHOLD:
-			raise TwitchLoadError(
+			self.log.warn(
 				f'After filling the message buffer to the max ({TwitchChat.LOAD_MESSAGES_AHEAD}), '
 				f'it only covers up to {self.loaded_range[1] - self.last_requested_position} seconds ahead, '
 				f'which is less than the load-more treshold ({TwitchChat.LOAD_MORE_TRESHOLD})'

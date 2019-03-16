@@ -80,20 +80,20 @@ class MPV(threading.Thread):
 				while '\n' in buffer:
 					message, buffer = buffer.split('\n', 1)
 					message = json.loads(message)
-					self.log.debug('Received message', message)
 					if 'request_id' not in message:
-						self.log.warn('Received a message without a request id, ignoring it', message)
+						self.log.warn(f'Received a message without a request id, ignoring it: {message}')
 						continue
 					request_id = message['request_id']
 					with self.listener_lock:
 						listener = self.listeners[request_id]
 						if listener:
+							self.log.debug(f'Received response for request {request_id}: {message}')
 							listener.set(message)
 						else:
-							self.log.warn('Received a response that nothing was waiting for', message)
+							self.log.warn(f'Received response for request {request_id}, but there is no listener: {message}')
 
 	def send(self, data):
-		self.log.debug('Adding message to send buffer', data)
+		self.log.debug(f'Adding message to send buffer: {data}')
 		with self.send_lock:
 			self.send_buffer += (data + '\n').encode('utf-8')
 
