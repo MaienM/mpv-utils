@@ -3,6 +3,8 @@ import socket
 import sys
 import threading
 
+import _logging as logging
+
 
 class EventWithMessage(threading.Event):
 	""" A subclass of threading.Event that can pass more data along than just set/not set. """
@@ -15,6 +17,10 @@ class EventWithMessage(threading.Event):
 			raise Exception('Cannot set twice')
 		self.data = data
 		super(EventWithMessage, self).set()
+
+	def clear(self):
+		super(EventWithMessage, self).clear()
+		self.data = None
 
 	def wait(self, *args, **kwargs):
 		super(EventWithMessage, self).wait(*args, **kwargs)
@@ -30,6 +36,8 @@ class MPV(threading.Thread):
 
 	def __init__(self, socket_path, reconnect = True):
 		super(MPV, self).__init__()
+
+		self.log = logging.getLogger(__name__, MPV)
 
 		self.socket_path = socket_path
 		self.reconnect = reconnect
@@ -72,8 +80,9 @@ class MPV(threading.Thread):
 				while '\n' in buffer:
 					message, buffer = buffer.split('\n', 1)
 					message = json.loads(message)
+					self.log.debug('Received message', message)
 					if 'request_id' not in message:
-						print('Received a message without a request id, ignoring it', message, file = sys.stderr)
+						self.log.warn('Received a message without a request id, ignoring it', message)
 						continue
 					request_id = message['request_id']
 					with self.listener_lock:
@@ -81,9 +90,10 @@ class MPV(threading.Thread):
 						if listener:
 							listener.set(message)
 						else:
-							print('Received a message, but nothing listened', message, file = sys.stderr)
+							self.log.warn('Received a response that nothing was waiting for', message)
 
 	def send(self, data):
+		self.log.debug('Adding message to send buffer', data)
 		with self.send_lock:
 			self.send_buffer += (data + '\n').encode('utf-8')
 
@@ -103,6 +113,7 @@ class MPV(threading.Thread):
 
 			response = event.wait(5)
 			if response['error'] != 'success':
+				print(response)
 				raise MPVError(response['data'])
 			return response['data']
 		finally:

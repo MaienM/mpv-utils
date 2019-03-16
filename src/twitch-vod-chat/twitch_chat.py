@@ -4,11 +4,8 @@ import threading
 import time
 import weakref
 
+import _logging as logging
 from symbols import BADGES
-
-
-def dprint(*args):
-	pass
 
 
 class TwitchLoadError(Exception):
@@ -69,6 +66,8 @@ class TwitchChat(threading.Thread):
 	def __init__(self, api_key, vodid, start = 0):
 		super(TwitchChat, self).__init__()
 
+		self.log = logging.getLogger(__name__, TwitchChat, vodid)
+
 		self.api_key = api_key
 		self.vodid = vodid
 		self.stop_requested = threading.Event()
@@ -93,16 +92,17 @@ class TwitchChat(threading.Thread):
 				self._load_more()
 
 			# Wait until a sufficient amount of time has passed, but allow earlier triggering by use of a condition.
-			dprint('[loop] Waiting for timer/interrupt')
+			self.log.debug('Waiting for timer/interrupt')
 			with self.needs_loading:
 				self.needs_loading.wait(30)
-			dprint('[loop] Checking whether we need to load more')
+			self.log.debug('Checking whether we need to load more')
 
 	def __getitem__(self, timestamp):
 		# Load more if the timestamp is outside of what is currently loaded.
 		if timestamp not in range(*self.loaded_range):
-			dprint(
-				f'[getitem] Requested timestamp ({timestamp}) is outside of the loaded range {self.loaded_range}, '
+			self.log.info(
+				f'Requested timestamp ({format_timestamp(timestamp)}) is outside of the loaded range '
+				f'{format_timestamp(self.loaded_range[0])} - {format_timestamp(self.loaded_range[1])}, '
 				'sending interrupt to load more'
 			)
 			with self.lock:
@@ -110,9 +110,9 @@ class TwitchChat(threading.Thread):
 			with self.data_loaded:
 				with self.needs_loading:
 					self.needs_loading.notify()
-				dprint('[getitem] Waiting for requested timestamp to become available')
+				self.log.debug(f'Waiting for requested timestamp ({format_timestamp(timestamp)}) to become available')
 				self.data_loaded.wait_for(lambda: timestamp in range(self.loaded_range[0], self.loaded_range[1] + 1))
-			dprint('[getitem] Requested timestamp has become available, proceeding')
+			self.log.debug(f'Requested timestamp ({format_timestamp(timestamp)}) has become available, proceeding')
 
 		with self.lock:
 			slice = self.time_slices.get(timestamp, (0, 0))
@@ -147,13 +147,21 @@ class TwitchChat(threading.Thread):
 			self.time_slices[current_timestamp] = (start_index, i - 1)
 			del self.time_slices[-1]
 
+			slices_debug = sorted(self.time_slices.items(), key = lambda p: p[0])
+			slices_debug = [(format_timestamp(k), v[1] - v[0] + 1) for k, v in slices_debug]
+			self.log.debug(f'Slices: {slices_debug}')
+
 			# Update the loaded range. We subtract one from the highest known timestamp because there is no guarantee
 			# that we have _all_ messages for that timestamp.
 			self.loaded_range = (
 				min(self.last_requested_position, *self.time_slices.keys()),
 				max(self.time_slices.keys()) - 1,
 			)
-			dprint(f'[update_indexes] Range: {self.loaded_range}')
+<<<<<<< HEAD
+			self.log.info(f'Range: {self.loaded_range}')
+=======
+			self.log.info(f'Range: {format_timestamp(self.loaded_range[0])} - {format_timestamp(self.loaded_range[1])}')
+>>>>>>> 2540933... fixup! Improved logging
 
 	def _clean_stored_messages(self):
 		""" Trim the message list to the messages that are still relevant given the current position and settings. """
@@ -167,14 +175,14 @@ class TwitchChat(threading.Thread):
 			# Remove old messages beyond the specified buffer.
 			first_index_of_next_timestamp = self._get_next_timestamp_index(self.last_requested_position)
 			cutoff_index = min(first_index_of_next_timestamp - TwitchChat.KEEP_MESSAGES_BEHIND, 0)
-			dprint(f'[load] Clearing {cutoff_index} old messages')
+			self.log.info(f'Clearing {cutoff_index} old messages')
 			del self.messages[:cutoff_index]
 
 			# Update the indexes.
 			self._update_indexes()
 
 	def _process_messages(self, messages):
-		dprint(f'[process] Processing {len(messages)} messages')
+		self.log.debug(f'Processing {len(messages)} messages')
 		messages = [TwitchMessage(message) for message in messages]
 		with self.lock:
 			# The API appears to return some more messages than needed, at least on the first request. Drop all messages
@@ -182,18 +190,18 @@ class TwitchChat(threading.Thread):
 			if self.messages and messages[0].timestamp < self.messages[-1].timestamp:
 				while messages and messages.pop(0) != self.messages[-1]:
 					pass
-				dprint(f'[process] After dropping messages we already have, {len(messages)} remain')
+				self.log.debug(f'After dropping messages we already have, {len(messages)} remain')
 
 			self.messages += messages
 			self._update_indexes()
-		dprint(f'[process] Message buffer: {len(self.messages)}')
+		self.log.debug(f'Message buffer: {len(self.messages)}')
 
 		# Notify listeners that the data has been updated.
 		with self.data_loaded:
 			self.data_loaded.notify_all()
 
 	def _load_more(self):
-		dprint('[load] Starting load')
+		self.log.info('Starting load')
 		# Determine the amount of messages that need to be loaded to get back to the LOAD_MESSAGES_AHEAD size.
 		with self.lock:
 			next_timestamp_index = self._get_next_timestamp_index(self.last_requested_position)
@@ -208,7 +216,7 @@ class TwitchChat(threading.Thread):
 
 		def load_with_qargs(qargs):
 			nonlocal cursor, to_load
-			dprint(f'[load] Loading with args {qargs}')
+			self.log.debug(f'Loading with args {qargs}')
 			response = session.get(f'https://api.twitch.tv/v5/videos/{self.vodid}/comments?{qargs}', timeout = 10)
 			response.raise_for_status()
 			data = response.json()
@@ -217,21 +225,21 @@ class TwitchChat(threading.Thread):
 			to_load -= len(messages)
 			self._process_messages(messages)
 
-		dprint(f'[load] {to_load} messages remaining')
+		self.log.debug(f'{to_load} messages remaining')
 		load_with_qargs(f'content_offset_seconds={self.loaded_range[1] + 1}')
 		while cursor and to_load > 0:
 			time.sleep(0.1)
-			dprint(f'[load] {to_load} messages remaining')
+			self.log.debug(f'{to_load} messages remaining')
 			load_with_qargs(f'cursor={cursor}')
 		if not cursor:
 			# This means all messages have been loaded, which means the loaded_range should stretch to the end of the
 			# video.
 			with self.lock:
-				self.loaded_range = (self.loaded_range[0], 10 ** 10)
+				self.loaded_range = (self.loaded_range[0], float('inf'))
 		if self.loaded_range[1] - self.last_requested_position < TwitchChat.LOAD_MORE_TRESHOLD:
 			raise TwitchLoadError(
 				f'After filling the message buffer to the max ({TwitchChat.LOAD_MESSAGES_AHEAD}), '
 				f'it only covers up to {self.loaded_range[1] - self.last_requested_position} seconds ahead, '
 				f'which is less than the load-more treshold ({TwitchChat.LOAD_MORE_TRESHOLD})'
 			)
-		dprint('[load] Finished loading')
+		self.log.info('Finished loading')
