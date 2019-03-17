@@ -118,8 +118,8 @@ class TwitchChat(threading.Thread):
 			self.log.debug(f'Requested timestamp ({format_timestamp(timestamp)}) has become available, proceeding')
 
 		with self.lock:
-			slice = self.time_slices.get(timestamp, (0, 0))
-			return self.messages[slice[0]:slice[1]]
+			slice = self.time_slices.get(timestamp, (0, -1))
+			return self.messages[slice[0]:slice[1] + 1]
 
 	def _get_next_timestamp_index(self, time):
 		"""
