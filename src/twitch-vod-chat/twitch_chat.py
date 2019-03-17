@@ -27,6 +27,9 @@ class TwitchCommenter(object):
 			cls.INSTANCES[_id] = instance = cls(data)
 			return instance
 
+	def __repr__(self):
+		return f'TwitchCommenter<id={repr(self.id)},name={repr(self.name)}>'
+
 
 class TwitchMessage(object):
 	""" A class representing a Twitch chat message. """
@@ -41,6 +44,9 @@ class TwitchMessage(object):
 
 	def print(self):
 		print(f'{format_timestamp(self.timestamp)} <{self.commenter.name}> {self.message}')
+
+	def __repr__(self):
+		return f'TwitchMessage<id={repr(self.id)},timestamp={self.timestamp},commenter={repr(self.commenter)}>'
 
 
 class TwitchChat(threading.Thread):
@@ -187,19 +193,32 @@ class TwitchChat(threading.Thread):
 			self._update_indexes()
 
 	def _process_messages(self, messages):
-		self.log.debug(f'Processing {len(messages)} messages')
 		messages = [TwitchMessage(message) for message in messages]
+		self.log.debug(f'Processing {len(messages)} messages: {messages}')
 		with self.lock:
 			# The API appears to return some more messages than needed, at least on the first request. Drop all messages
 			# that we already have.
 			if self.messages and messages[0].timestamp < self.messages[-1].timestamp:
-				while messages and messages.pop(0) != self.messages[-1]:
-					pass
-				self.log.debug(f'After dropping messages we already have, {len(messages)} remain')
+				last_message = self.messages[-1]
+				self.log.info(f'Possible duplicate messages, dropping messages until we find message {last_message}')
+				for i, message in enumerate(messages):
+					if message == last_message:
+						del messages[:i + 1]
+						self.log.info(
+							f'Found last known message in new received list at position {i}. '
+							f'Dropping everything up to and including this message, keeping {len(messages)}.'
+						)
+						break
+				else:
+					self.log.warn(
+						f"Unable to find last known message in the received list. Keeping all messages. "
+						"It's possible this means duplicates were kept."
+					)
 
 			self.messages += messages
 			self._update_indexes()
-		self.log.debug(f'Message buffer: {len(self.messages)}')
+		self.log.info(f'Message buffer size: {len(self.messages)}')
+		self.log.debug(f'Message buffer: {self.messages}')
 
 		# Notify listeners that the data has been updated.
 		with self.data_loaded:
