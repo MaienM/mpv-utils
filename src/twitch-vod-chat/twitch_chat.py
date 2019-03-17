@@ -108,7 +108,7 @@ class TwitchChat(threading.Thread):
 
 	def __getitem__(self, timestamp):
 		# Load more if the timestamp is outside of what is currently loaded.
-		if timestamp not in range(*self.loaded_range):
+		if timestamp not in range(self.loaded_range[0], self.loaded_range[1] + 1):
 			self.log.info(
 				f'Requested timestamp ({format_timestamp(timestamp)}) is outside of the loaded range '
 				f'{format_timestamp(self.loaded_range[0])} - {format_timestamp(self.loaded_range[1])}, '
