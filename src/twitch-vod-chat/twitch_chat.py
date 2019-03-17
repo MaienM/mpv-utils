@@ -166,15 +166,7 @@ class TwitchChat(threading.Thread):
 				min(self.last_requested_position, *self.time_slices.keys()),
 				max(self.time_slices.keys()) - 1,
 			)
-<<<<<<< HEAD
-<<<<<<< HEAD
-			self.log.info(f'Range: {self.loaded_range}')
-=======
 			self.log.info(f'Range: {format_timestamp(self.loaded_range[0])} - {format_timestamp(self.loaded_range[1])}')
->>>>>>> 2540933... fixup! Improved logging
-=======
-			self.log.info(f'Available range: {self.loaded_range}')
->>>>>>> 295f47c... Added some more details to the log
 
 	def _clean_stored_messages(self):
 		""" Trim the message list to the messages that are still relevant given the current position and settings. """
