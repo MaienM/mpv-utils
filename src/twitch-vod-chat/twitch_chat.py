@@ -8,6 +8,10 @@ import _logging as logging
 from symbols import BADGES
 
 
+def format_timestamp(timestamp):
+	return f'{int(timestamp / 3600)}:{int((timestamp % 3600) / 60):02}:{int(timestamp % 60):02}'
+
+
 class TwitchCommenter(object):
 	""" A class representing a Twitch chat member. """
 
@@ -39,8 +43,7 @@ class TwitchMessage(object):
 		self.commenter = TwitchCommenter.get(data['commenter'])
 
 	def print(self):
-		timestamp = f'{int(self.timestamp / 3600)}:{int((self.timestamp % 3600) / 60):02}:{int(self.timestamp % 60):02}'
-		print(f'{timestamp} <{self.commenter.name}> {self.message}')
+		print(f'{format_timestamp(self.timestamp)} <{self.commenter.name}> {self.message}')
 
 
 class TwitchChat(threading.Thread):
