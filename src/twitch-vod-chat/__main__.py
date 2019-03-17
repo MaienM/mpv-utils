@@ -24,15 +24,23 @@ def main():
 	mpv.start()
 
 	# Listen to changes in the file that is being played.
+	previous_path = None
 	printer = None
 	twitch = None
 	def path_change(path):
-		nonlocal printer, twitch
+		nonlocal previous_path, printer, twitch
+
+		log.debug(f'Path change from {previous_path} to {path}.')
+		if path == previous_path:
+			return
+		previous_path = path
 
 		if printer:
-			printer.kill()
+			printer.stop()
+			printer.join()
 		if twitch:
-			twitch.kill()
+			twitch.stop()
+			twitch.join()
 
 		match = TWITCH_VOD_RE.match(path)
 		if not match:
