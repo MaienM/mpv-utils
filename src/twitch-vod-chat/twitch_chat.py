@@ -76,7 +76,7 @@ class TwitchChat(threading.Thread):
 		self.messages = []
 		self.time_slices = {}
 		self.loaded_range = (-1, -1)
-		self.last_requested_position = 0
+		self.last_requested_position = start
 
 	def stop(self):
 		self.stop_requested.set()
@@ -124,7 +124,10 @@ class TwitchChat(threading.Thread):
 			if not self.time_slices:
 				return 0
 			if time not in self.time_slices:
-				time = min([t for t in self.time_slices.keys() if t > time])
+				times_ahead = [t for t in self.time_slices.keys() if t > time]
+				if not times_ahead:
+					return len(self.messages)
+				time = min(times_ahead)
 			return self.time_slices[time][0]
 
 	def _update_indexes(self):
@@ -226,7 +229,8 @@ class TwitchChat(threading.Thread):
 			self._process_messages(messages)
 
 		self.log.debug(f'{to_load} messages remaining')
-		load_with_qargs(f'content_offset_seconds={self.loaded_range[1] + 1}')
+		start_time = max(self.last_requested_position, self.loaded_range[1] + 1)
+		load_with_qargs(f'content_offset_seconds={start_time}')
 		while cursor and to_load > 0:
 			time.sleep(0.1)
 			self.log.debug(f'{to_load} messages remaining')
