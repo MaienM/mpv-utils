@@ -6,10 +6,7 @@ import weakref
 
 import _logging as logging
 from symbols import BADGES
-
-
-def format_timestamp(timestamp):
-	return f'{int(timestamp / 3600)}:{int((timestamp % 3600) / 60):02}:{int(timestamp % 60):02}'
+from utils import format_timestamp
 
 
 class TwitchCommenter(object):
