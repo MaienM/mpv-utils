@@ -44,10 +44,10 @@ def main():
 
 		match = TWITCH_VOD_RE.match(path)
 		if not match:
-			log.info('\nCurrent video is not a twitch vod, no chat to show...')
+			log.info('Current video is not a twitch vod, no chat to show.')
 			return
 
-		log.info(f'\nNew twitch vod started ({path}), showing chat...')
+		log.info(f'New twitch vod started ({path}), showing chat.')
 		vod_id = match.group('id')
 		position = int(float(mpv.command('get_property', 'playback-time')))
 		twitch = TwitchChat(config.get_str('twitch', 'client_id'), vod_id, start = position)
