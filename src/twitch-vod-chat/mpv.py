@@ -70,6 +70,12 @@ class MPV(threading.Thread):
 		self.stop_requested.set()
 
 	def run(self):
+		try:
+			self._run()
+		except Exception as e:
+			self.log.exception(e)
+
+	def _run(self):
 		self._connect_and_process()
 		if self.reconnect:
 			while not self.stop_requested.is_set():

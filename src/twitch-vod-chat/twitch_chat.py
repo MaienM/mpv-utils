@@ -87,6 +87,12 @@ class TwitchChat(threading.Thread):
 			self.needs_loading.notify()
 
 	def run(self):
+		try:
+			self._run()
+		except Exception as e:
+			self.log.exception(e)
+
+	def _run(self):
 		while not self.stop_requested.is_set():
 			# Check whether we need to load more messages
 			if self.last_requested_position + TwitchChat.LOAD_MORE_TRESHOLD >= self.loaded_range[1]:
