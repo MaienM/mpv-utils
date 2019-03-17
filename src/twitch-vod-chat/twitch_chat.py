@@ -83,12 +83,16 @@ class TwitchChat(threading.Thread):
 
 	def stop(self):
 		self.stop_requested.set()
+		with self.needs_loading:
+			self.needs_loading.notify()
 
 	def run(self):
 		while not self.stop_requested.is_set():
 			# Check whether we need to load more messages
 			if self.last_requested_position + TwitchChat.LOAD_MORE_TRESHOLD >= self.loaded_range[1]:
 				self._load_more()
+			if self.stop_requested.is_set():
+				return
 
 			# Wait until a sufficient amount of time has passed, but allow earlier triggering by use of a condition.
 			self.log.debug('Waiting for timer/interrupt')
@@ -234,7 +238,7 @@ class TwitchChat(threading.Thread):
 		self.log.debug(f'{to_load} messages remaining')
 		start_time = max(self.last_requested_position, self.loaded_range[1] + 1)
 		load_with_qargs(f'content_offset_seconds={start_time}')
-		while cursor and to_load > 0:
+		while cursor and to_load > 0 and not self.stop_requested.is_set():
 			time.sleep(0.1)
 			self.log.debug(f'{to_load} messages remaining')
 			load_with_qargs(f'cursor={cursor}')
