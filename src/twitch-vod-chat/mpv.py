@@ -139,7 +139,11 @@ class MPV(threading.Thread):
 			self._send(json.dumps(command_data))
 
 			response = event.wait(5)
-			if response['error'] != 'success':
+			if response is None:
+				self.log.error(f'Timeout while waiting for a response to request {request_id}')
+				raise MPVError('No response received')
+			elif response['error'] != 'success':
+				self.log.error(f'Error while waiting for a response to request {request_id}: {response["error"]}')
 				raise MPVError(response['error'])
 			return response.get('data')
 		finally:
