@@ -71,7 +71,11 @@ class TwitchMessage(object):
 		return tuple(c * 0.75 for c in color)
 
 	def print(self):
-		print(f'{format_timestamp(self.timestamp)} <{colr.color(self.commenter.name, fore = self.color)}> {self.message}')
+		print(
+			f'{format_timestamp(self.timestamp)} '
+			f'<{"".join(self.badges)}{colr.color(self.commenter.name, fore = self.color)}> '
+			f'{self.message}'
+		)
 
 	def __repr__(self):
 		return (

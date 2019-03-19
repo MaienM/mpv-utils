@@ -10,14 +10,15 @@ try:
 	import nerdfonts
 
 	BADGES.update({
-		'staff': nf.icons['mdi-wrench'],
-		'admin': nf.icons['mdi-shield'],
-		'broadcaster': nf.icons['fa-video_camera'],
-		'moderator': nf.icons['mdi-sword'],
-		'verified': nf.icons['oct-verified'],
-		'vip': nf.icons['fa-diamond'],
-		'turbo': nf.icons['mdi-battery_charging'],
-		'prime': nf.icons['mdi-crown'],
+		'staff': nerdfonts.icons['mdi_wrench'],
+		'admin': nerdfonts.icons['mdi_shield'],
+		'broadcaster': nerdfonts.icons['fa_video_camera'],
+		'moderator': nerdfonts.icons['mdi_sword_cross'],
+		'subscriber': nerdfonts.icons['fa_star'],
+		'verified': nerdfonts.icons['oct_verified'],
+		'vip': nerdfonts.icons['fa_diamond'],
+		'turbo': nerdfonts.icons['mdi_battery_charging'],
+		'prime': nerdfonts.icons['mdi_crown'],
 	})
-except:
+except ImportError:
 	print('Nerdfonts package not available, falling back to ascii symbols')
