@@ -18,9 +18,10 @@ def main():
 
 	# Load the config.
 	config = Config()
+	config.apply()
 
 	# Connect to MPV.
-	mpv = MPV(config.get_str('core', 'socket_path'))
+	mpv = MPV()
 	mpv.start()
 
 	# Listen to changes in the file that is being played.
@@ -50,7 +51,7 @@ def main():
 		log.info(f'New twitch vod started ({path}), showing chat.')
 		vod_id = match.group('id')
 		position = int(float(mpv.command('get_property', 'playback-time')))
-		twitch = TwitchChat(config.get_str('twitch', 'client_id'), vod_id, start = position)
+		twitch = TwitchChat(vod_id, start = position)
 		twitch.start()
 		printer = TwitchChatPrinter(mpv, twitch)
 		printer.start()

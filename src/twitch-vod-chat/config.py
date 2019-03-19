@@ -16,6 +16,19 @@ else:
 CONFIG_PATH = os.path.join(CONFIG_PATH, 'mpv-utils.ini')
 
 
+class Configurable(object):
+	""" Abstract class for classes that need items from the config. """
+
+	@classmethod
+	def configure(cls, config):
+		"""
+		Apply the loaded config to the class.
+
+		Will be invoked on all subclasses of Configurable when Config.apply() is called.
+		"""
+		raise NotImplementedError()
+
+
 class Config(ConfigUpdater):
 	""" Handles everything configuration related. """
 
@@ -122,6 +135,11 @@ class Config(ConfigUpdater):
 					index = order.index(default_order[i - 1]) + 1
 				order.insert(index, item)
 		return order
+
+	def apply(self):
+		""" Applies the config to all Configurable classes. """
+		for subclass in Configurable.__subclasses__():
+			subclass.configure(self)
 
 	def get_str(self, section, key):
 		return self.get(section, key).value

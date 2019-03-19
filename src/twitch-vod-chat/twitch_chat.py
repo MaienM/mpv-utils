@@ -4,6 +4,7 @@ import threading
 import time
 import weakref
 
+from config import Configurable
 import _logging as logging
 from symbols import BADGES
 from utils import format_timestamp
@@ -49,7 +50,7 @@ class TwitchMessage(object):
 		return f'TwitchMessage<id={repr(self.id)},timestamp={self.timestamp},commenter={repr(self.commenter)}>'
 
 
-class TwitchChat(threading.Thread):
+class TwitchChat(threading.Thread, Configurable):
 	""" A class representing the chat for a given VOD. """
 
 	# The amount of time (in seconds) before the last message is reached that we will start loading more messages.
@@ -65,12 +66,11 @@ class TwitchChat(threading.Thread):
 	# target when loading more.
 	LOAD_MESSAGES_AHEAD = 1000
 
-	def __init__(self, api_key, vodid, start = 0):
+	def __init__(self, vodid, start = 0):
 		super(TwitchChat, self).__init__()
 
 		self.log = logging.getLogger(__name__, TwitchChat, vodid)
 
-		self.api_key = api_key
 		self.vodid = vodid
 		self.stop_requested = threading.Event()
 
@@ -83,6 +83,10 @@ class TwitchChat(threading.Thread):
 		self.time_slices = {}
 		self.loaded_range = (-1, -1)
 		self.last_requested_position = start
+
+	@classmethod
+	def configure(cls, config):
+		cls.client_id = config.get_str('twitch', 'client_id')
 
 	def stop(self):
 		self.stop_requested.set()
@@ -236,7 +240,7 @@ class TwitchChat(threading.Thread):
 		to_load = TwitchChat.LOAD_MESSAGES_AHEAD - num_messages_ahead
 		cursor = None
 		session = requests.Session()
-		session.headers = { 'Client-ID': self.api_key, 'Accept': 'application/vnd.twitchtv.v5+json' }
+		session.headers = { 'Client-ID': self.client_id, 'Accept': 'application/vnd.twitchtv.v5+json' }
 
 		def load_with_qargs(qargs):
 			nonlocal cursor, to_load

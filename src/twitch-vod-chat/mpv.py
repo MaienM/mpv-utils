@@ -4,6 +4,7 @@ import socket
 import sys
 import threading
 
+from config import Configurable
 import _logging as logging
 
 
@@ -32,15 +33,14 @@ class MPVError(Exception):
 	""" An error that was received in response to an MPV IPC call. """
 
 
-class MPV(threading.Thread):
+class MPV(threading.Thread, Configurable):
 	""" Integration with MPV over the IPC socket. """
 
-	def __init__(self, socket_path, reconnect = True):
+	def __init__(self, reconnect = True):
 		super(MPV, self).__init__()
 
 		self.log = logging.getLogger(__name__, MPV)
 
-		self.socket_path = socket_path
 		self.reconnect = reconnect
 		self.stop_requested = threading.Event()
 
@@ -65,6 +65,10 @@ class MPV(threading.Thread):
 
 		# Handle property-change events, for the observers.
 		self.handlers['property-change'].append(self._observe_handler)
+
+	@classmethod
+	def configure(cls, config):
+		cls.socket_path = config.get_str('core', 'socket_path')
 
 	def stop(self):
 		self.stop_requested.set()
