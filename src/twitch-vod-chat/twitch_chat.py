@@ -4,6 +4,8 @@ import threading
 import time
 import weakref
 
+import colr
+
 from config import Configurable
 import _logging as logging
 from symbols import BADGES
@@ -38,16 +40,44 @@ class TwitchMessage(object):
 	def __init__(self, data):
 		self.id = data['_id']
 		self.timestamp = data['content_offset_seconds']
-		self.message = data['message']['body']
-		badge_ids = [badge['_id'] for badge in data['message'].get('user_badges', [])]
+		message = data['message']
+		self.message = message['body']
+		badge_ids = [badge['_id'] for badge in message.get('user_badges', [])]
 		self.badges = [BADGES[_id] for _id in badge_ids if _id in BADGES]
 		self.commenter = TwitchCommenter.get(data['commenter'])
+		if 'user_color' in message:
+			self.color = self._shift_color(colr.hex2rgb(message['user_color']))
+		else:
+			self.color = 'white'
+
+	@classmethod
+	def configure(cls, config):
+		background = config.get_enum('core', 'background', ('light', 'dark', 'unknown'))
+		if background == 'light':
+			cls._shift_color = cls._shift_color_light
+		elif background == 'dark':
+			cls._shift_color = cls._shift_color_light
+
+	@staticmethod
+	def _shift_color(color):
+		return color
+
+	@staticmethod
+	def _shift_color_dark(color):
+		return tuple(c * 0.75 + 63 for c in color)
+
+	@staticmethod
+	def _shift_color_light(color):
+		return tuple(c * 0.75 for c in color)
 
 	def print(self):
-		print(f'{format_timestamp(self.timestamp)} <{self.commenter.name}> {self.message}')
+		print(f'{format_timestamp(self.timestamp)} <{colr.color(self.commenter.name, fore = self.color)}> {self.message}')
 
 	def __repr__(self):
-		return f'TwitchMessage<id={repr(self.id)},timestamp={self.timestamp},commenter={repr(self.commenter)}>'
+		return (
+			f'TwitchMessage<id={repr(self.id)},timestamp={self.timestamp},commenter={repr(self.commenter)},'
+			f'color={self.color}>'
+		)
 
 
 class TwitchChat(threading.Thread, Configurable):

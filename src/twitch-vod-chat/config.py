@@ -184,3 +184,12 @@ class Config(ConfigUpdater):
 				f"Invalid value for boolean property {section}.{key}: '{value}'. "
 				'Valid options are: yes, no, true, false, 0, 1.'
 			)
+
+	def get_enum(self, section, key, options):
+		value = self.get_str(section, key)
+		if value.lower() not in options:
+			raise ValueError(
+				f"Invalid value for property {section}.{key}: '{value}'. "
+				f'Valid options are: {", ".join(options)}'
+			)
+
