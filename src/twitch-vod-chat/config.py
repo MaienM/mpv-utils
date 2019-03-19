@@ -6,6 +6,8 @@ import sys
 from configupdater import ConfigUpdater
 from configupdater.configupdater import Section, Option
 
+import _logging as logging
+
 
 DEFAULT_CONFIG_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), 'config.ini'))
 
@@ -35,25 +37,30 @@ class Config(ConfigUpdater):
 	def __init__(self):
 		super(Config, self).__init__()
 
+		self.log = logging.getLogger(Config)
+
 		# Load the default config.
+		self.log.debug(f'Loading default config from {DEFAULT_CONFIG_PATH}')
 		default_config = ConfigUpdater()
 		default_config.read(DEFAULT_CONFIG_PATH)
 
 		# If the config does not exist, write the default config and exit.
 		if not os.path.exists(CONFIG_PATH):
-			print(f'No config found. Writing default config to {CONFIG_PATH} and exiting.', file = sys.stderr)
+			self.log.error('No user config found. Writing default config to {CONFIG_PATH} and exiting.')
 			os.makedirs(os.path.realpath(os.path.dirname(CONFIG_PATH)), exist_ok = True)
 			with open(CONFIG_PATH, 'w') as f:
 				default_config.write(f)
 			sys.exit(1)
 
 		# Read the user config into a separate instance.
+		self.log.debug(f'Loading user config from {CONFIG_PATH}')
 		user_config = ConfigUpdater()
 		user_config.read(CONFIG_PATH)
 
 		# Fill this instance with values from the two configs. The order and values from the user config are used, and
 		# when they are not present we fallback to the default config. For new sections/options, try to put them after the
 		# section/option they appear after in the default config.
+		self.log.debug('Merging configs')
 		default_sections = dict(default_config.items())
 		user_sections = dict(user_config.items())
 		for section in Config._get_order(default_config.sections(), user_config.sections()):
@@ -77,6 +84,7 @@ class Config(ConfigUpdater):
 					sobject.add_option(item)
 
 		if self.get_bool('core', 'update_config'):
+			self.log.debug(f'Writing merged config to {CONFIG_PATH}')
 			with open(CONFIG_PATH, 'w') as f:
 				self.write(f)
 
@@ -139,10 +147,17 @@ class Config(ConfigUpdater):
 	def apply(self):
 		""" Applies the config to all Configurable classes. """
 		for subclass in Configurable.__subclasses__():
+			self.log.info(f'Configuring {subclass.__module__}.{subclass.__name__}')
 			subclass.configure(self)
 
 	def get_str(self, section, key):
-		return self.get(section, key).value
+		try:
+			value = self.get(section, key).value
+			self.log.info(f'Getting property {section}.{key}: {value}')
+			return value
+		except KeyError:
+			self.log.error(f'Attempted to get property {section}.{key}, which does not exist')
+			raise
 
 	def get_int(self, section, key):
 		value = self.get_str(section, key)
