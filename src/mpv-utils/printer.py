@@ -48,6 +48,8 @@ class TwitchChatPrinter(threading.Thread):
 
 	def run(self):
 		try:
+			self.mpv.on('pause', self._handle_pause)
+			self.mpv.on('unpause', self._handle_unpause)
 			self._run()
 		except Exception as e:
 			self.log.exception(e)
@@ -68,7 +70,7 @@ class TwitchChatPrinter(threading.Thread):
 					print(f'Time changed too much, jumping from {format_timestamp_ms(old_timestamp)} to {format_timestamp_ms(self.current_timestamp)}')
 					next_messages = []
 					self.buffer = []
-					self.next_request_timestamp = int(self.current_timestamp)
+					self.next_request_timestamp = int(self.current_timestamp) - TwitchChatPrinter.MAX_CORRECTION_WITHOUT_JUMP
 
 			# Get the next batch of messages, if needed.
 			if not next_messages:
@@ -163,16 +165,16 @@ class TwitchChatPrinter(threading.Thread):
 			finally:
 				self.pause_cond.release()
 
-	def _handle_play(self, data):
-		with self.pause_cond:
-			self.log.debug('Video is paused')
-			self.is_paused = False
-			self.last_sync = float('-inf')
-			self.pause_cond.notify_all()
-
 	def _handle_pause(self, data):
 		with self.pause_cond:
 			self.log.debug('Video is resumed')
 			self.is_paused = True
+			self.pause_cond.notify_all()
+
+	def _handle_unpause(self, data):
+		with self.pause_cond:
+			self.log.debug('Video is paused')
+			self.is_paused = False
+			self.last_sync = float('-inf')
 			self.pause_cond.notify_all()
 
